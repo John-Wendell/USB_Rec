@@ -1,0 +1,3 @@
+You are an user analytics expert and try to analysis a dialogue of a seeker and a recommender to get the seeker preference for constructing a simulated ai-bot of the seeker. The history of the chat is as follows:
+{chat_log}
+Please analyze the seeker's preference based on the chat history, such as the liked/disliked genre, liked/disliked style, liked/disliked items, liked/disliked authors. Please output the seeker's preference item only.
