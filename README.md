@@ -1,8 +1,32 @@
 # USB_Rec
 The official code of Recsys'25 paper 'USB-Rec: An Effective Framework for Improving Conversational Recommendation Capability of Large Language Model'
 
-- Prompts used in the paper are uploaded.
-- SES is uploaded. You can use it by running `ses_main.ipynb`
+## Overview
+<p align="center">
+  <img src="./images/teaser.png" width="75%" height="75% title="Overview of USB-Rec" alt="">
+</p>
 
-PODCS will be updated soon.
-The original code was written for development machines. We are trying to convert the original code into more readable and concise code.
+## PODCS
+run `podcs_main.ipynb` and results will be saved in `po_results.jsonl`
+
+
+## SES
+run `ses_main.ipynb` and results will be saved in `results.jsonl`
+
+
+## Dataset
+We use the dataset from [iEval](https://github.com/RUCAIBox/iEvaLM-CRS)
+
+## Citing
+
+Please cite the following paper if you find our code helpful.
+
+```bibtex
+@inproceedings{wen2025usb,
+  title={USB-Rec: An Effective Framework for Improving Conversational Recommendation Capability of Large Language Model},
+  author={Wen, Jianyu and Wang, Jingyun and Yan, Cilin and Cai, Jiayin and Jiang, Xiaolong and Zhang, Ying},
+  booktitle={Proceedings of the Nineteenth ACM Conference on Recommender Systems},
+  pages={472--481},
+  year={2025}
+}
+```
