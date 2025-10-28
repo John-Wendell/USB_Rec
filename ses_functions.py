@@ -19,6 +19,9 @@ class SESConfig:
     begin_turn: int = 1
     vote_num: int = 10
     sample_times: int = 3
+    po_sample_times: int = 3
+    po_vote_num: int = 10
+
 
     # model & decoding
     model: str = "xxx" # using the deployed model
@@ -47,6 +50,8 @@ def create_client() -> Any:
 
     api_key="xxxxxxx"
     base_url="xxxxx"
+    
+    
 
     if not api_key:
         raise EnvironmentError(
@@ -56,6 +61,7 @@ def create_client() -> Any:
     # base_url can be None for official API; keep if user wants a custom endpoint
     client = OpenAI(api_key=api_key, base_url=base_url)
     return client
+
 
 
 def load_data(path: str) -> List[Dict[str, Any]]:
@@ -434,7 +440,152 @@ def eval_conversations(client: Any, data: List[Dict[str, Any]], config: SESConfi
 
     return score_log
 
+def eval_conversations_with_voting(client: Any, data: List[Dict[str, Any]], config: SESConfig) -> Dict[str, Any]:
+    """Run SES evaluation for a dataset.
 
+    Returns a dict with scores per conversation and aggregated info.
+    """
+    score_log: Dict[str, Any] = {}
+    continue_utter = 2 * config.continue_turn 
+
+    # pre-load templates
+    user_prompt_tpl = load_prompt("prompt_template/user_simu_eval_prompt.md")
+    user_last_turn_prompt = load_prompt("prompt_template/user_simu_eval_last_turn_prompt.md")
+    rec_prompt = load_prompt("prompt_template/rec_sys_prompt.md")
+    rec_eval_last_turn_tpl = load_prompt("prompt_template/rec_sys_eval_last_turn.md")
+    rec_simu_last_turn_prompt = load_prompt("prompt_template/rec_sys_internal_last_turn_prompt.md")
+    user_internal_prompt_tpl = load_prompt("prompt_template/user_simu_internal_prompt.md")
+
+    for data_i in range(len(data)):
+        print(f"Evaluating conversation {data_i + 1}/{len(data)}")
+        item = data[data_i]
+        history_org = item["context"][:-1]  # remove the last recommender utterance
+        query_org = item["context"][-1]
+        label = item.get("resp")
+        rec_items = item.get("rec", [])
+        resp_label = item.get("resp")
+        # render prompts that depend on rec items
+        user_prompt = safe_replace(user_prompt_tpl, {"rec": ", ".join(rec_items)})
+        rec_eval_last_turn_prompt = safe_replace(rec_eval_last_turn_tpl, {"rec": ", ".join(rec_items)})
+
+        # compute user preference summary for internal simulation
+
+        for _ in range(config.po_sample_times):
+            sample_results: List[Dict[str, Any]] = []
+            query = copy(query_org)
+            history = copy(history_org)
+            first_resp: Optional[str] = None
+            for utter_i in range(continue_utter):
+                print('utter_i of data_i:', utter_i, data_i)
+                is_rec_turn = (utter_i % 2 == 0)
+                if is_rec_turn:
+
+                    messages = (
+                        [{"role": "system", "content": rec_prompt}]
+                        + history2messages(history)
+                        + [{"role": "user", "content": query}]
+                    )
+                    try:
+                        rec_resp = _chat_with_retry(
+                            client,
+                            model=config.model,
+                            messages=messages,
+                            temperature=config.rec_temp_normal,
+                            max_tokens=config.max_tokens,
+                            retries=config.retries,
+                            backoff_sec=config.backoff_sec,
+                        )
+
+                    except Exception as e:
+                        print(f"Recommender turn generation failed: {e}")
+
+                    if utter_i == 0:
+                        first_resp = rec_resp
+                    if utter_i == continue_utter - 2:
+                        rec_resp = rec_resp + rec_eval_last_turn_prompt
+                    history.append(query)
+                    query = rec_resp
+
+                else:
+                    # seeker turn
+                    messages = (
+                        [{"role": "system", "content": user_prompt}]
+                        + history2messages(history)
+                        + [{"role": "user", "content": query}]
+                    )
+                    if utter_i == continue_utter - 1:
+                        # voting for the last seeker turn
+                        votes: List[int] = []
+                        vote_messages = copy(messages)
+                        for _ in range(config.po_vote_num):
+                            text = _chat_with_retry(
+                                client,
+                                model=config.model,
+                                messages=vote_messages,
+                                temperature=config.user_temp_vote,
+                                max_tokens=config.max_tokens,
+                                retries=config.retries,
+                                backoff_sec=config.backoff_sec,
+                            )
+                            score = _parse_vote_score(text)
+                            if score is not None:
+                                votes.append(score)
+                        print('    score: ', votes)
+                        avg_score_i = (sum(votes) / len(votes)) if votes else 0.0
+
+                    else:
+                        try:
+                            resp_user = _chat_with_retry(
+                                client,
+                                model=config.model,
+                                messages=messages,
+                                temperature=config.user_temp_normal,
+                                max_tokens=config.max_tokens,
+                                retries=config.retries,
+                                backoff_sec=config.backoff_sec,
+                            )
+                            # print('resp_user:', resp_user)
+                        except Exception as e:
+                            print(f"User turn generation failed: {e}")
+                            resp_user = ""
+                            
+                        if utter_i == continue_utter - 3:
+                            resp_user = resp_user + user_last_turn_prompt
+                    history.append(query)
+                    query = resp_user
+                        
+            sample_results.append({
+                "response": first_resp or "",
+                "avg_score": avg_score_i,
+            })
+        
+        #select the highest scored response among samples
+        win_resp = resp_label
+        win_sample_candid = max(sample_results, key=lambda x: x["avg_score"])
+        win_resp_candid = win_sample_candid["response"]
+        win_score_candid = win_sample_candid["avg_score"]
+        if win_score_candid >= 2.0:
+            win_resp = win_resp_candid
+        # select the loest scored response among samples
+        loose_resp = resp_label
+        loose_sample_candid = min(sample_results, key=lambda x: x["avg_score"])
+        loose_resp_candid = loose_sample_candid["response"]
+        loose_score_candid = loose_sample_candid["avg_score"]
+        if loose_score_candid < 2.0:
+            loose_resp = loose_resp_candid
+        score_log[str(data_i)] = {
+            "resp_label": label,
+            "rec_label": rec_items,
+            "win_resp": win_resp,
+            "win_score": win_score_candid,
+            "loose_resp": loose_resp,
+            "loose_score": loose_score_candid,
+            # "history": history,
+        }
+        print('score_log:', score_log[str(data_i)])
+        
+
+    return score_log
 __all__ = [
     "SESConfig",
     "create_client",
