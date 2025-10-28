@@ -19,7 +19,7 @@ We use the dataset from [iEval](https://github.com/RUCAIBox/iEvaLM-CRS).
 
 ## Results
 <p align="center">
-  <img src="./images/results.png" width="70%" height="75% title="Comparison" alt="">
+  <img src="./images/comparison.png" width="100%" height="75% title="Comparison" alt="">
 </p>
 
 
