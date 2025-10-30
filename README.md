@@ -8,7 +8,8 @@ The official code of Recsys'25 paper 'USB-Rec: An Effective Framework for Improv
 
 ## Configs Setting
 Set the `model` in `SESConfig` you want to use in `ses_functions.py`, which can be a locally deployed LLM or an open-sourced LLM.
-Then set the `api_key` and  `base_url`in `create_client` function if you use an open-sourced LLM.
+
+Then set the `api_key` and `base_url` in `create_client` function if you use an open-sourced LLM.
 
 
 ## PODCS
