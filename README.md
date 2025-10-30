@@ -6,6 +6,11 @@ The official code of Recsys'25 paper 'USB-Rec: An Effective Framework for Improv
   <img src="./images/teaser.png" width="50%" height="75% title="Overview of USB-Rec" alt="">
 </p>
 
+## Configs Setting
+Set the `model` in `SESConfig` you want to use in `ses_functions.py`, which can be a locally deployed LLM or an open-sourced LLM.
+Then set the `api_key` and  `base_url`in `create_client` function if you use an open-sourced LLM.
+
+
 ## PODCS
 run `podcs_main.ipynb` and results will be saved in `po_results.jsonl`.
 We deploy [llama-factory](https://github.com/hiyouga/LLaMA-Factory) to training the LLMs.
