@@ -1,6 +1,9 @@
 # USB_Rec
 The official code of Recsys'25 paper 'USB-Rec: An Effective Framework for Improving Conversational Recommendation Capability of Large Language Model'
 
+[https://arxiv.org/pdf/2509.20381](https://arxiv.org/pdf/2509.20381)
+
+
 ## Overview
 <p align="center">
   <img src="./images/teaser.png" width="50%" height="75% title="Overview of USB-Rec" alt="">
