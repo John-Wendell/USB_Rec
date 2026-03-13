@@ -1,8 +1,11 @@
 # USB_Rec
+
 The official code of Recsys'25 paper 'USB-Rec: An Effective Framework for Improving Conversational Recommendation Capability of Large Language Model'
 
 [https://arxiv.org/pdf/2509.20381](https://arxiv.org/pdf/2509.20381)
-
+<p align="center">
+  <img src="./images/poster.png" width="100%" height="100% title="Poster" alt="">
+</p>
 
 ## Overview
 <p align="center">
